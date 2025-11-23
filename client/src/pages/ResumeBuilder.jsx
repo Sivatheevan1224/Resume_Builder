@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import PersonalInfoForm from "../components/PersonalInfoForm";
+import ResumePreview from "../components/ResumePreview";
 
 const ResumeBuilder = () => {
   const { resumeId } = useParams();
@@ -89,7 +90,9 @@ const ResumeBuilder = () => {
 
               {/* Section Navigation */}
               <div className="flex justify-between items-center mb-6 border-b border-gray-300 py-1">
-                <div></div>
+                <div>
+                  
+                </div>
                 <div className="flex items-center">
                   {activeSectionIndex !== 0 && (
                     <button
@@ -124,14 +127,35 @@ const ResumeBuilder = () => {
 
               {/* Active Section Form */}
               <div className="space-y-6">
-                    {activeSection.id === "personal" && (
-                      <PersonalInfoForm data={resumeData.personal_info} onChange={(data)=>setResumeData(prev=>({...prev, personal_info:data}))} removeBackground={removeBackground} setRemoveBackground={setRemoveBackground} />
-                    )}
+                {activeSection.id === "personal" && (
+                  <PersonalInfoForm
+                    data={resumeData.personal_info}
+                    onChange={(data) =>
+                      setResumeData((prev) => ({
+                        ...prev,
+                        personal_info: data,
+                      }))
+                    }
+                    removeBackground={removeBackground}
+                    setRemoveBackground={setRemoveBackground}
+                  />
+                )}
               </div>
             </div>
           </div>
           {/* Right Panel - Preview */}
-          <div></div>
+          <div className="lg:col-span-7 max-lg:mt-6">
+            <div>
+              {/* Resume Buttons */}
+            </div>
+
+            {/* Resume Preview Area */}
+            <ResumePreview
+              data={resumeData}
+              template={resumeData.template}
+              accentColor={resumeData.accent_color}
+            />
+          </div>
         </div>
       </div>
     </div>
