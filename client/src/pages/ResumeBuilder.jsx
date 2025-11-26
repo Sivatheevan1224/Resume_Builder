@@ -19,6 +19,7 @@ import ColorPicker from "../components/ColorPicker";
 import ProfessionalSummaryForm from "../components/ProfessionalSummaryForm";
 import ExperienceForm from "../components/ExperienceForm";
 import EducationForm from "../components/EducationForm";
+import ProjectForm from "../components/ProjectForm";
 
 const ResumeBuilder = () => {
   const { resumeId } = useParams();
@@ -30,7 +31,7 @@ const ResumeBuilder = () => {
     experience: [],
     education: [],
     skills: [],
-    projects: [],
+    project: [],
     template: "classic",
     accent_color: "#3B82F6",
     public: false,
@@ -181,9 +182,20 @@ const ResumeBuilder = () => {
                   } />
                 )}
 
+                {/* Projects Form */}
+                {activeSection.id === "projects" && (
+                  <ProjectForm data={resumeData.project} onChange={(data) =>
+                    setResumeData((prev) => ({
+                      ...prev,
+                      project: data,
+                    }))
+                  } />
+                )}
+
               </div>
             </div>
           </div>
+          
           {/* Right Panel - Preview */}
           <div className="lg:col-span-7 max-lg:mt-6">
             <div>
@@ -197,6 +209,7 @@ const ResumeBuilder = () => {
               accentColor={resumeData.accent_color}
             />
           </div>
+
         </div>
       </div>
     </div>
