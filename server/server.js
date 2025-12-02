@@ -1,15 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
+import connectDB from './configs/db.js';
+import userRouter from './routes/userRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 //Database Connection
-import connectDB from './configs/db.js';
 await connectDB();
-
-
 
 app.use(cors());
 app.use(express.json());
@@ -17,6 +16,9 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.send('Server is Running ...');
 });
+
+//Routes
+app.use('/api/users', userRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
