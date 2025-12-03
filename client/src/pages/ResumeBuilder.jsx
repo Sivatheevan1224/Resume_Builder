@@ -43,7 +43,7 @@ const ResumeBuilder = () => {
     experience: [],
     education: [],
     skills: [],
-    project: [],
+    projects: [],
     template: "classic",
     accent_color: "#3B82F6",
     public: false,
@@ -312,12 +312,12 @@ const ResumeBuilder = () => {
                 {/* Projects Form */}
                 {activeSection.id === "projects" && (
                   <ProjectForm
-                    data={resumeData.project}
+                    data={resumeData.projects}
                     onChange={(data) =>
-                      setResumeData((prev) => ({
-                        ...prev,
-                        project: data,
-                      }))
+                      setResumeData({
+                        ...resumeData,
+                        projects: data,
+                      })
                     }
                   />
                 )}
