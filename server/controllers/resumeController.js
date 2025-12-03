@@ -9,6 +9,10 @@ export const createResume = async (req, res) => {
     const userId = req.userId;
     const { title } = req.body;
 
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
     // create new resume
     const newResume = await Resume.create({
       userId,
@@ -20,7 +24,8 @@ export const createResume = async (req, res) => {
       .status(201)
       .json({ message: "Resume created successfully", resume: newResume });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.error("Create resume error:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 

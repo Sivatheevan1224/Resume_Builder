@@ -10,6 +10,10 @@ import {
 import React, { useEffect } from "react";
 import { dummyResumeData } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import api from "../configs/api";
+import toast from "react-hot-toast";
+import pdfToText from "react-pdftotext";
 
 const Dashboard = () => {
   const colors = [
@@ -26,26 +30,69 @@ const Dashboard = () => {
   const [title, setTitle] = React.useState("");
   const [resume, setResume] = React.useState(null);
   const [editResumeId, setEditResumeId] = React.useState("");
+  const[isLoading, setIsLoading] = React.useState(false);
+
+  const { user, token } = useSelector(state => state.auth);
 
   const navigate = useNavigate();
 
+
+
   const loadAllResumes = async () => {
     //fetch all resumes from backend
-    setAllResumes(dummyResumeData);
+    ///setAllResumes(dummyResumeData); //dummy data
+
   };
 
   const createResume = async (e) => {
-    e.preventDefault();
-    //create resume api call
-    setShowCreateResume(false);
-    navigate("/app/builder/resume123");
+    // e.preventDefault();
+    // //create resume api call
+    // setShowCreateResume(false);
+    // navigate("/app/builder/resume123");
+
+    try {
+      e.preventDefault();
+      const {data} = await api.post('/api/resumes/create',{title}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setAllResumes([...allResumes, data.resume]);
+      setTitle("");
+      setShowCreateResume(false);
+      navigate(`/app/builder/${data.resume._id}`);
+      
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
+    }
   };
 
   const uploadResume = async (e) => {
+    // e.preventDefault();
+    // setShowUploadResume(false);
+    // //upload resume api call
+    // navigate("/app/builder/resume123");
+
     e.preventDefault();
-    setShowUploadResume(false);
-    //upload resume api call
-    navigate("/app/builder/resume123");
+    setIsLoading(true);
+
+    try {
+      const resumeText = await pdfToText(resume);
+      const {data} = await api.post('/api/ai/upload-resume',{title, resumeText}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setTitle("");
+      setResume(null);
+      setShowUploadResume(false);
+      navigate(`/app/builder/${data.resumeId}`);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
+    }
+    setIsLoading(false);
+
   };
 
   const editTitle = async (e) => {
