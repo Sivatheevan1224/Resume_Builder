@@ -26,9 +26,15 @@ import ExperienceForm from "../components/ExperienceForm";
 import EducationForm from "../components/EducationForm";
 import ProjectForm from "../components/ProjectForm";
 import SkillsForm from "../components/SkillsForm";
+import { useSelector } from "react-redux";
+import api from "../configs/api";
+import toast from "react-hot-toast";
 
 const ResumeBuilder = () => {
   const { resumeId } = useParams();
+  
+  const {token} = useSelector((state) => state.auth);
+
   const [resumeData, setResumeData] = React.useState({
     _id: "",
     title: "",
@@ -45,10 +51,38 @@ const ResumeBuilder = () => {
 
   const loadExistingResume = async (resumeId) => {
     //api call to load resume data by id
-    const resume = dummyResumeData.find((resume) => resume._id === resumeId);
-    if (resume) {
-      setResumeData(resume);
-      document.title = resume.title + " - Resume Builder";
+    // const resume = dummyResumeData.find((resume) => resume._id === resumeId);
+    // if (resume) {
+    //   setResumeData(resume);
+    //   document.title = resume.title + " - Resume Builder";
+    // }
+
+    try {
+      const{data} = await api.get('/api/resumes/get/'+resumeId, {
+        headers:{
+          Authorization:`Bearer ${token}`
+        }
+      });
+      if(data.resume){
+        // Format dates from MongoDB (ISO string) to month input format (YYYY-MM)
+        if(data.resume.experience) {
+          data.resume.experience = data.resume.experience.map(exp => ({
+            ...exp,
+            start_date: exp.start_date ? exp.start_date.substring(0, 7) : "",
+            end_date: exp.end_date ? exp.end_date.substring(0, 7) : ""
+          }));
+        }
+        if(data.resume.education) {
+          data.resume.education = data.resume.education.map(edu => ({
+            ...edu,
+            graduation_date: edu.graduation_date ? edu.graduation_date.substring(0, 7) : ""
+          }));
+        }
+        setResumeData(data.resume);
+        document.title = data.resume.title + " - Resume Builder";
+      }
+    } catch (error) {
+      console.log("Error loading resume data:", error.message);
     }
   };
 
@@ -73,7 +107,25 @@ const ResumeBuilder = () => {
   }, [resumeId]);
 
   const changeResumeVisibility= async ()=>{
-      setResumeData({...resumeData, public: !resumeData.public});
+      //setResumeData({...resumeData, public: !resumeData.public});
+      try {
+        const formData= new FormData();
+        formData.append('resumeId', resumeId);
+        formData.append('resumeData', JSON.stringify({public: !resumeData.public}));
+        //formData.append('removeBackground', removeBackground);
+
+        const{data} = await api.put('/api/resumes/update', formData, {
+          headers:{
+            Authorization:`Bearer ${token}`,
+            'Content-Type':'multipart/form-data'
+          }
+        });
+        
+        setResumeData({...resumeData, public: !resumeData.public});
+        toast.success(data.message);
+      } catch (error) {
+        console.log("Error updating resume visibility:", error.message);
+      }
   }
  
   const handleShare=()=>{
@@ -89,6 +141,34 @@ const ResumeBuilder = () => {
 
   const downloadResume= ()=>{
     window.print();
+  }
+
+  const saveResume= async ()=>{
+    try {
+      let updatedResumeData = structuredClone(resumeData);
+
+      //remove image from updatedResumeData if removeBackground is true
+      if(typeof resumeData.personal_info.image === 'object' ){
+        delete updatedResumeData.personal_info.image;
+      }
+
+      const formData= new FormData();
+      formData.append('resumeId', resumeId);
+      formData.append('resumeData', JSON.stringify(updatedResumeData));
+      removeBackground && formData.append('removeBackground', "yes");
+
+      typeof resumeData.personal_info.image === 'object' && formData.append('image', resumeData.personal_info.image);
+
+      const{data} = await api.put('/api/resumes/update', formData, {
+        headers:{
+          Authorization:`Bearer ${token}`
+        }
+      });
+      setResumeData(data.resume);
+      toast.success(data.message);
+    } catch (error) {
+      console.log("Error saving resume:", error.message);
+    }
   }
 
   return (
@@ -255,7 +335,7 @@ const ResumeBuilder = () => {
                   />
                 )}
               </div>
-                <button className="bg-gradient-to-br from-green-100 to-green-200 ring ring-green-300 text-green-600 hover:ring-green-400 transition-all rounded-md px-6 py-2 mt-6 teext-sm ">
+                <button onClick={()=>{toast.promise(saveResume,{loading:'Saving...'})}} className="bg-gradient-to-br from-green-100 to-green-200 ring ring-green-300 text-green-600 hover:ring-green-400 transition-all rounded-md px-6 py-2 mt-6 teext-sm ">
                   Save Changes
                 </button>
 

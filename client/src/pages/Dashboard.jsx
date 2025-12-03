@@ -1,5 +1,6 @@
 import {
   FilePenLineIcon,
+  LoaderCircleIcon,
   PencilIcon,
   PlusIcon,
   TrashIcon,
@@ -30,18 +31,25 @@ const Dashboard = () => {
   const [title, setTitle] = React.useState("");
   const [resume, setResume] = React.useState(null);
   const [editResumeId, setEditResumeId] = React.useState("");
-  const[isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const { user, token } = useSelector(state => state.auth);
+  const { user, token } = useSelector((state) => state.auth);
 
   const navigate = useNavigate();
-
-
 
   const loadAllResumes = async () => {
     //fetch all resumes from backend
     ///setAllResumes(dummyResumeData); //dummy data
-
+    try {
+      const { data } = await api.get("/api/users/resumes", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setAllResumes(data.resumes);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
+    }
   };
 
   const createResume = async (e) => {
@@ -52,16 +60,19 @@ const Dashboard = () => {
 
     try {
       e.preventDefault();
-      const {data} = await api.post('/api/resumes/create',{title}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const { data } = await api.post(
+        "/api/resumes/create",
+        { title },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       setAllResumes([...allResumes, data.resume]);
       setTitle("");
       setShowCreateResume(false);
       navigate(`/app/builder/${data.resume._id}`);
-      
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message);
     }
@@ -78,11 +89,15 @@ const Dashboard = () => {
 
     try {
       const resumeText = await pdfToText(resume);
-      const {data} = await api.post('/api/ai/upload-resume',{title, resumeText}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const { data } = await api.post(
+        "/api/ai/upload-resume",
+        { title, resumeText },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       setTitle("");
       setResume(null);
@@ -92,20 +107,53 @@ const Dashboard = () => {
       toast.error(error?.response?.data?.message || error.message);
     }
     setIsLoading(false);
-
   };
 
   const editTitle = async (e) => {
-    e.preventDefault();
     //edit resume title api call
-  }
+    try {
+      e.preventDefault();
+      const { data } = await api.put(
+        "/api/resumes/update",{resumeId: editResumeId, resumeData:{ title }},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setAllResumes(
+        allResumes.map((resume) =>
+          resume._id === editResumeId
+            ? { ...resume, title: title}
+            : resume
+        )
+      );
+      setEditResumeId("");
+      setTitle("");
+      toast.success(data.message);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
+    }
+  };
 
   const deleteResume = async (resumeId) => {
     //delete resume api call
-    const confirm = window.confirm("Are you sure you want to delete this resume?");
-    if (confirm) {
-      //proceed to delete
-      setAllResumes(prev=> prev.filter(resume=> resume._id !== resumeId));
+    try {
+      const confirm = window.confirm(
+        "Are you sure you want to delete this resume?"
+      );
+      if (confirm) {
+        //proceed to delete
+        const { data } = await api.delete(`/api/resumes/delete/${resumeId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setAllResumes(allResumes.filter((resume) => resume._id !== resumeId));
+        toast.success(data.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
     }
   };
   useEffect(() => {
@@ -129,9 +177,10 @@ const Dashboard = () => {
               Create Resume
             </p>
           </button>
-          <button 
-          onClick={()=> setShowUploadResume(true)}
-          className="w-full bg-white sm:max-w-36 h-48 flex flex-col items-center justify-center rounded-lg gap-2 text-slate-600 border border-dashed border-slate-300 group hover:border-purple-500 hover:shadow-lg transition-all duration-300 cursor-pointer">
+          <button
+            onClick={() => setShowUploadResume(true)}
+            className="w-full bg-white sm:max-w-36 h-48 flex flex-col items-center justify-center rounded-lg gap-2 text-slate-600 border border-dashed border-slate-300 group hover:border-purple-500 hover:shadow-lg transition-all duration-300 cursor-pointer"
+          >
             <UploadCloudIcon className="size-11 transition-all  duration-300 p-2.5 bg-gradient-to-br from-purple-300 to-purple-500 text-white rounded-full" />
             <p className="text-sm  group-hover:text-purple-600 transition-all duration-300">
               Upload Existing
@@ -146,7 +195,8 @@ const Dashboard = () => {
             const baseColor = colors[index % colors.length];
             return (
               <button
-                key={index} onClick={()=>navigate(`/app/builder/${resume._id}`)}
+                key={index}
+                onClick={() => navigate(`/app/builder/${resume._id}`)}
                 className="relative w-full sm:max-w-36 h-48  flex flex-col items-center justify-center rounded-lg gap-2 border group hover:shadow-lg transition-all duration-300 cursor-pointer"
                 style={{
                   background: `linear-gradient(135deg, ${baseColor}10, ${baseColor}40)`,
@@ -169,14 +219,20 @@ const Dashboard = () => {
                 >
                   Updated on {new Date(resume.updatedAt).toLocaleDateString()}
                 </p>
-                <div  onClick={(e) => e.stopPropagation()} className="absolute top-1 right-1 group-hover:flex items-center hidden">
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-1 right-1 group-hover:flex items-center hidden"
+                >
                   <TrashIcon
                     onClick={() => deleteResume(resume._id)}
                     className="size-7 p-1.5 hover:bg-white/50 rounded  transition-colors"
                     style={{ color: baseColor }}
                   />
                   <PencilIcon
-                    onClick={() => {setEditResumeId(resume._id); setTitle(resume.title);}}
+                    onClick={() => {
+                      setEditResumeId(resume._id);
+                      setTitle(resume.title);
+                    }}
                     className="size-7 p-1.5 hover:bg-white/50 rounded  transition-colors"
                     style={{ color: baseColor }}
                   />
@@ -239,7 +295,10 @@ const Dashboard = () => {
                 required
               />
               <div>
-                <label htmlFor="resume-input" className="block text-sm text-slate-700">
+                <label
+                  htmlFor="resume-input"
+                  className="block text-sm text-slate-700"
+                >
                   Select Resume File
                   <div className="flex flex-col items-center justify-center gap-2 border group  text-slate-400 border-slate-400 border-dashed rounded-md p-4 py-10 my-4  hover:border-green-500 hover:text-green-700 transition-colors cursor-pointer">
                     {resume ? (
@@ -247,7 +306,9 @@ const Dashboard = () => {
                     ) : (
                       <>
                         <UploadCloud className="size-14 stroke-1" />
-                        <p className="text-sm">Click to upload or drag and drop</p>
+                        <p className="text-sm">
+                          Click to upload or drag and drop
+                        </p>
                         <p className="text-xs text-slate-500">
                           (Supported format: .pdf)
                         </p>
@@ -255,10 +316,19 @@ const Dashboard = () => {
                     )}
                   </div>
                 </label>
-                <input type="file" id="resume-input" hidden accept=".pdf" onChange={(e)=>setResume(e.target.files[0])}/>
+                <input
+                  type="file"
+                  id="resume-input"
+                  hidden
+                  accept=".pdf"
+                  onChange={(e) => setResume(e.target.files[0])}
+                />
               </div>
-              <button className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors ">
-                Upload Resume
+              <button disabled={isLoading} className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
+                {isLoading && (
+                  <LoaderCircleIcon className="animate-spin size-4 text-white" />
+                )}
+                {isLoading ? "Uploading" : "Upload Resume"}
               </button>
               <XIcon
                 className="absolute top-4 right-4 cursor-pointer text-slate-400 hover:text-slate-600 transition-colors"
@@ -303,8 +373,6 @@ const Dashboard = () => {
             </div>
           </form>
         )}
-
-
       </div>
     </div>
   );

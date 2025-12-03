@@ -108,40 +108,66 @@ export const updateResume = async (req, res) => {
     const { resumeId, resumeData, removeBackground } = req.body;
     const image = req.file;
 
-    let resumeDataCopy = JSON.parse(resumeData);
+    console.log("Update Request:", { userId, resumeId, hasImage: !!image, removeBackground });
+
+    // Handle both JSON object and stringified JSON
+    let resumeDataCopy;
+    if (typeof resumeData === 'string') {
+      resumeDataCopy = JSON.parse(resumeData);
+    } else {
+      resumeDataCopy = JSON.parse(JSON.stringify(resumeData));
+    }
 
     if (image) {
+      // Read file as buffer
+      const imageBuffer = fs.readFileSync(image.path);
 
-        const imageBufferData= fs.createReadStream(image.path);
+      // Build transformation string - only add background removal if requested
+      let transformations = 'w-300,h-300,fo-face,z-0.75';
+      
+      // Frontend sends "yes" string when checkbox is checked
+      if (removeBackground === "yes") {
+        transformations += ',e-bgremove';
+      }
+      
+      console.log("Uploading to ImageKit with transformations:", transformations);
+      console.log("Remove background:", removeBackground);
 
-      //upload image to imagekit
-
-      const response = await imagekit.files.upload({
-        file: imageBufferData, //required
+      // Upload image to imagekit
+      const response = await imagekit.upload({
+        file: imageBuffer,
         fileName: image.originalname,
-        folder: "user-resumes",
-        transformation:{
-            pre:'w-300, h-300, fo-face , z-0.75'+ (removeBackground ? ', e-bgremove' : '')
+        folder: 'user-resumes',
+        transformation: {
+          pre: transformations
         }
       });
 
+      console.log('Image uploaded successfully');
       resumeDataCopy.personal_info.image = response.url;
+      console.log('Final image URL:', resumeDataCopy.personal_info.image);
 
-        //remove temp file
-    //   fs.unlinkSync(image.path);
-    //   console.log(response);
+      // Remove temp file
+      fs.unlinkSync(image.path);
     }
 
-    const resume = await Resume.findByIdAndUpdate(
+    // Update resume in database
+    const resume = await Resume.findOneAndUpdate(
       { userId, _id: resumeId },
       resumeDataCopy,
       { new: true }
     );
 
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
     return res
       .status(200)
       .json({ message: "Resume updated successfully", resume });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.error("Update resume error:", error.message);
+    console.error("Full error:", error);
+    return res.status(500).json({ message: error.message });
   }
 };

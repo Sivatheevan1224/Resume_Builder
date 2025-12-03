@@ -36,8 +36,8 @@ const resumeSchema = new mongoose.Schema(
       {
         company: { type: String},
         position: { type: String},
-        startDate: Date,
-        endDate: Date,
+        start_date: Date,
+        end_date: Date,
         description: { type: String },
         is_current: { type: Boolean},
       },

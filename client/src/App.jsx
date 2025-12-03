@@ -21,9 +21,9 @@ const App = () => {
     try {
       if (token) {
         // Simulate fetching user data with the token
-        const { data } = await api.get("/users/data", {
+        const { data } = await api.get("/api/users/data", {
           headers: {
-            Authorization: token,
+            Authorization: `Bearer ${token}`,
           },
         });
 
